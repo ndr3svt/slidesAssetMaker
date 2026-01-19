@@ -1,6 +1,5 @@
 import type { DragEvent } from "react";
 import { useMemo, useRef, useState } from "react";
-import { DeckSchema, type Deck } from "@shared/deck";
 import { generateDeck as generateDeckApi } from "@/lib/api";
 import {
   apiDeckToEditor,
@@ -30,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Copy, FileJson, ImagePlus, Info, Plus, Save, Trash2 } from "lucide-react";
 import { downloadBlob, exportDeckToPdfBlob } from "@/lib/export";
+import { parseProjectOrLegacy, serializeProject } from "@/lib/project";
 
 const CANVAS_WIDTH = 520;
 const THUMB_WIDTH = 190;
@@ -65,6 +65,12 @@ export default function App() {
   const [importJsonOpen, setImportJsonOpen] = useState(false);
   const [importJsonText, setImportJsonText] = useState("");
   const [importJsonError, setImportJsonError] = useState<string | null>(null);
+  const importJsonFileRef = useRef<HTMLInputElement | null>(null);
+
+  const [exportJsonOpen, setExportJsonOpen] = useState(false);
+  const [exportJsonText, setExportJsonText] = useState("");
+  const [exportJsonError, setExportJsonError] = useState<string | null>(null);
+  const exportJsonFileRef = useRef<HTMLInputElement | null>(null);
 
   const canGenerate = genPrompt.trim().length > 0 && genPrompt.length <= genPromptMax && !genLoading;
 
@@ -106,68 +112,68 @@ export default function App() {
     }
   }
 
-  function toApiDeckFromEditor(ed: EditorDeck): Deck {
-    const slides = ed.slides.map((s) => {
-      const title = s.elements.find((e) => e.type === "text" && e.kind === "title") as TextElement | undefined;
-      const subtitle = s.elements.find((e) => e.type === "text" && e.kind === "subtitle") as TextElement | undefined;
-      const body = s.elements.find((e) => e.type === "text" && e.kind === "body") as TextElement | undefined;
-      return {
-        title: (title?.text ?? "Slide").slice(0, 90),
-        subtitle: subtitle?.text ? subtitle.text.slice(0, 140) : null,
-        body: body?.text ? body.text.slice(0, 520) : null,
-        bullets: null,
-        footer: null,
-      };
-    });
-    return { title: ed.title.slice(0, 120) || "Carousel", slides };
-  }
-
-  function normalizeDeckInput(raw: any): Deck | null {
-    if (!raw || typeof raw !== "object") return null;
-    const title = typeof raw.title === "string" ? raw.title : "Carousel";
-    const slidesIn = Array.isArray(raw.slides) ? raw.slides : [];
-    const slides = slidesIn.map((s: any) => ({
-      title: typeof s?.title === "string" ? s.title : "Slide",
-      subtitle: typeof s?.subtitle === "string" ? s.subtitle : null,
-      body: typeof s?.body === "string" ? s.body : null,
-      bullets: Array.isArray(s?.bullets) ? s.bullets.filter((x: any) => typeof x === "string") : null,
-      footer: typeof s?.footer === "string" ? s.footer : null,
-    }));
-    const parsed = DeckSchema.safeParse({ title, slides });
-    return parsed.success ? parsed.data : null;
-  }
-
   function downloadJson(filename: string, data: unknown) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     downloadBlob(blob, filename);
   }
 
-  function onExportCarouselJson() {
-    const api = toApiDeckFromEditor(deck);
-    const name = (deck.title || "carousel").replace(/[^\w\- ]+/g, "").trim().slice(0, 64) || "carousel";
-    downloadJson(`${name}.json`, api);
-    setToast("Exported carousel JSON.");
-    setTimeout(() => setToast(null), 2000);
+  function refreshExportJson() {
+    const project = serializeProject(deck, branding);
+    setExportJsonText(JSON.stringify(project, null, 2));
+    setExportJsonError(null);
+  }
+
+  function onExportCarouselJsonDownload(text: string) {
+    try {
+      const raw = JSON.parse(text);
+      const parsed = parseProjectOrLegacy(raw);
+      if (!parsed || parsed.kind !== "project") {
+        setExportJsonError("Export JSON must be a sooft_carousel project (version 1).");
+        return;
+      }
+      const name = (deck.title || "carousel").replace(/[^\w\- ]+/g, "").trim().slice(0, 64) || "carousel";
+      downloadJson(`${name}.json`, parsed.project);
+      setToast("Exported project JSON.");
+      setTimeout(() => setToast(null), 2000);
+    } catch {
+      setExportJsonError("Invalid JSON (parse error).");
+    }
   }
 
   function onImportCarouselJson() {
     setImportJsonError(null);
     try {
       const raw = JSON.parse(importJsonText);
-      const parsed = normalizeDeckInput(raw);
+      const parsed = parseProjectOrLegacy(raw);
       if (!parsed) {
-        setImportJsonError("Invalid JSON. Expected { title, slides: [...] }.");
+        setImportJsonError("Invalid JSON. Expected a sooft_carousel project or a legacy {title, slides[]} deck.");
         return;
       }
-      const next = apiDeckToEditor(parsed);
-      setDeck(next);
+      if (parsed.kind === "project") {
+        setDeck(parsed.project.deck);
+        setBranding(parsed.project.branding);
+      } else {
+        setDeck(apiDeckToEditor(parsed.deck));
+      }
       setSelected(0);
       setSelectedElementId(null);
       setImportJsonOpen(false);
-      setToast("Imported carousel JSON.");
+      setToast("Imported JSON.");
       setTimeout(() => setToast(null), 2000);
     } catch {
       setImportJsonError("Invalid JSON (parse error).");
+    }
+  }
+
+  async function onLoadJsonFile(file: File | null, into: "import" | "export") {
+    if (!file) return;
+    const text = await fileToText(file);
+    if (into === "import") {
+      setImportJsonText(text);
+      setImportJsonError(null);
+    } else {
+      setExportJsonText(text);
+      setExportJsonError(null);
     }
   }
 
@@ -501,16 +507,16 @@ export default function App() {
                   </SelectContent>
 	                </Select>
 	              </div>
-	              <div className="mt-2 flex gap-2">
-	                <Button size="sm" variant="secondary" onClick={onSaveTemplate}>
-	                  <Save className="h-4 w-4" />
-	                  Save template
-	                </Button>
-	                <Button size="sm" variant="secondary" onClick={onExportTemplate}>
-	                  <FileJson className="h-4 w-4" />
-	                  Export template
-	                </Button>
-	              </div>
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" variant="secondary" onClick={onSaveTemplate}>
+                  <Save className="h-4 w-4" />
+                  Save template
+                </Button>
+                <Button size="sm" variant="secondary" onClick={onExportTemplate}>
+                  <FileJson className="h-4 w-4" />
+                  Export template
+                </Button>
+              </div>
 
               <Separator className="my-4" />
 
@@ -695,10 +701,13 @@ export default function App() {
                 </DialogContent>
 	              </Dialog>
 
-	              <Dialog open={importJsonOpen} onOpenChange={(open) => {
-	                setImportJsonOpen(open);
-	                if (open) setImportJsonError(null);
-	              }}>
+	              <Dialog
+	                open={importJsonOpen}
+	                onOpenChange={(open) => {
+	                  setImportJsonOpen(open);
+	                  if (open) setImportJsonError(null);
+	                }}
+	              >
 	                <DialogTrigger asChild>
 	                  <Button size="sm" variant="secondary">
 	                    <FileJson className="h-4 w-4" />
@@ -720,28 +729,73 @@ export default function App() {
 	                        </TooltipTrigger>
 	                        <TooltipContent className="max-h-[260px] overflow-auto whitespace-pre font-mono text-[11px] leading-relaxed">
 {`{
-  "title": "My carousel",
-  "slides": [
-    {
-      "title": "Slide 1",
-      "subtitle": null,
-      "body": "Short body text",
-      "bullets": null,
-      "footer": null
-    }
-  ]
+  "type": "sooft_carousel",
+  "version": 1,
+  "savedAt": "2026-01-01T00:00:00.000Z",
+  "branding": {
+    "name": "Andres Villa Torres",
+    "handle": "andresvillatorres",
+    "nameColor": "#c7c7d7",
+    "handleColor": "#9aa0b4",
+    "arrowColor": "#7c7cff"
+  },
+  "deck": {
+    "title": "My carousel",
+    "slides": [
+      {
+        "id": "slide_...",
+        "format": { "preset": "linkedin_portrait", "width": 1080, "height": 1350 },
+        "backgroundColor": "#000012",
+        "elements": [
+          {
+            "id": "el_...",
+            "type": "text",
+            "kind": "title",
+            "text": "Slide title",
+            "x": 90,
+            "y": 140,
+            "w": 900,
+            "h": 240,
+            "color": "#7c7cff",
+            "fontSize": 56,
+            "lineHeight": 1.05,
+            "fontWeight": 700,
+            "align": "left",
+            "opacity": 1
+          }
+        ]
+      }
+    ]
+  }
 }`}
 	                        </TooltipContent>
 	                      </Tooltip>
 	                    </div>
 	                  </DialogHeader>
-	                  <div className="space-y-3">
-	                    <Textarea
-	                      value={importJsonText}
-	                      onChange={(e) => setImportJsonText(e.target.value)}
-	                      placeholder='{"title":"...","slides":[...]}'
-	                      className="min-h-[360px] max-h-[70vh] resize-y scrollbar-none font-mono text-xs"
-	                    />
+		                  <div className="space-y-3">
+		                    <div className="flex items-center justify-between">
+		                      <Button
+		                        type="button"
+		                        variant="secondary"
+		                        size="sm"
+		                        onClick={() => importJsonFileRef.current?.click()}
+		                      >
+		                        Load file
+		                      </Button>
+		                      <input
+		                        ref={importJsonFileRef}
+		                        type="file"
+		                        accept="application/json,.json"
+		                        className="hidden"
+		                        onChange={(e) => onLoadJsonFile(e.target.files?.[0] ?? null, "import")}
+		                      />
+		                    </div>
+		                    <Textarea
+		                      value={importJsonText}
+		                      onChange={(e) => setImportJsonText(e.target.value)}
+		                      placeholder='{"title":"...","slides":[...]}'
+		                      className="min-h-[360px] max-h-[70vh] resize-y scrollbar-none font-mono text-xs"
+		                    />
 	                    <div className="flex items-center justify-end gap-2">
 	                      <Button variant="secondary" onClick={() => setImportJsonOpen(false)}>
 	                        Cancel
@@ -750,13 +804,65 @@ export default function App() {
 	                    </div>
 	                    {importJsonError ? <div className="text-sm text-destructive">{importJsonError}</div> : null}
 	                  </div>
+		                </DialogContent>
+		              </Dialog>
+
+	              <Dialog
+	                open={exportJsonOpen}
+	                onOpenChange={(open) => {
+	                  setExportJsonOpen(open);
+	                  if (open) refreshExportJson();
+	                  if (open) setExportJsonError(null);
+	                }}
+	              >
+	                <DialogTrigger asChild>
+	                  <Button size="sm" variant="secondary">
+	                    <FileJson className="h-4 w-4" />
+	                    Export JSON
+	                  </Button>
+	                </DialogTrigger>
+	                <DialogContent className="w-[min(920px,95vw)] max-w-none min-h-[600px] max-h-[90vh] overflow-y-auto scrollbar-none">
+	                  <DialogHeader>
+	                    <DialogTitle>Export project JSON</DialogTitle>
+	                    <DialogDescription>
+	                      Includes full slide layout (positions, colors, sizes, images, branding).
+	                    </DialogDescription>
+	                  </DialogHeader>
+	                  <div className="space-y-3">
+	                    <div className="flex items-center justify-between gap-2">
+	                      <div className="flex gap-2">
+	                        <Button type="button" variant="secondary" size="sm" onClick={refreshExportJson}>
+	                          Refresh
+	                        </Button>
+	                        <Button
+	                          type="button"
+	                          variant="secondary"
+	                          size="sm"
+	                          onClick={() => exportJsonFileRef.current?.click()}
+	                        >
+	                          Load file
+	                        </Button>
+	                        <input
+	                          ref={exportJsonFileRef}
+	                          type="file"
+	                          accept="application/json,.json"
+	                          className="hidden"
+	                          onChange={(e) => onLoadJsonFile(e.target.files?.[0] ?? null, "export")}
+	                        />
+	                      </div>
+	                      <Button type="button" onClick={() => onExportCarouselJsonDownload(exportJsonText)}>
+	                        Download
+	                      </Button>
+	                    </div>
+	                    <Textarea
+	                      value={exportJsonText}
+	                      onChange={(e) => setExportJsonText(e.target.value)}
+	                      className="min-h-[420px] max-h-[70vh] resize-y scrollbar-none font-mono text-xs"
+	                    />
+	                    {exportJsonError ? <div className="text-sm text-destructive">{exportJsonError}</div> : null}
+	                  </div>
 	                </DialogContent>
 	              </Dialog>
-
-	              <Button size="sm" variant="secondary" onClick={onExportCarouselJson}>
-	                <FileJson className="h-4 w-4" />
-	                Export JSON
-	              </Button>
 	              <Button size="sm" variant="secondary" onClick={onExportPdf} disabled={exporting}>
 	                {exporting ? "Exporting…" : "Export PDF"}
 	              </Button>
@@ -1074,5 +1180,14 @@ async function fileToDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(new Error("Failed to read file."));
     reader.onload = () => resolve(String(reader.result));
     reader.readAsDataURL(file);
+  });
+}
+
+async function fileToText(file: File): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file."));
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsText(file);
   });
 }
