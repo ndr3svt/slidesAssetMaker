@@ -55,10 +55,11 @@ export default function App() {
   const [genSlides, setGenSlides] = useState(5);
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  const genPromptMax = 20000;
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  const canGenerate = genPrompt.trim().length > 0 && !genLoading;
+  const canGenerate = genPrompt.trim().length > 0 && genPrompt.length <= genPromptMax && !genLoading;
 
   const selectedElement = useMemo(() => {
     const s = deck.slides[selected];
@@ -275,12 +276,12 @@ export default function App() {
           Templates
         </Button>
         <Separator orientation="vertical" className="mx-2 h-6" />
-        <div className="flex flex-1 items-center gap-2">
+        {/* <div className="flex flex-1 items-center gap-2">
           <Input className="max-w-[200px]" placeholder="Upload file" disabled />
           <Input className="max-w-[200px]" placeholder="AI photos" disabled />
           <Input className="max-w-[220px]" placeholder="Search Unsplash" disabled />
           <Input className="max-w-[200px]" placeholder="Search Giphy" disabled />
-        </div>
+        </div> */}
         <Button size="sm" className="min-w-[120px]">
           Carousel
         </Button>
@@ -507,7 +508,7 @@ export default function App() {
                     {genLoading ? "Generating…" : "AI Generate"}
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="w-[min(920px,95vw)] max-w-none min-h-[600px] max-h-[90vh] overflow-y-auto scrollbar-none">
                   <DialogHeader>
                     <DialogTitle>Generate carousel</DialogTitle>
                     <DialogDescription>Describe what you want. The API uses `OPENAI_API_KEY` from `.env`.</DialogDescription>
@@ -517,7 +518,14 @@ export default function App() {
                       value={genPrompt}
                       onChange={(e) => setGenPrompt(e.target.value)}
                       placeholder="Topic, angle, audience, and desired takeaway…"
+                      className="min-h-[260px] max-h-[60vh] resize-y scrollbar-none"
                     />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div>{genPrompt.length > genPromptMax ? "Prompt is too long." : " "}</div>
+                      <div className={genPrompt.length > genPromptMax ? "text-destructive" : ""}>
+                        {genPrompt.length}/{genPromptMax}
+                      </div>
+                    </div>
                     <div className="flex items-center gap-3">
                       <div className="text-sm text-muted-foreground">Slides</div>
                       <Input

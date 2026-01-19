@@ -40,7 +40,9 @@ export async function generateDeck({
     "",
     "JSON rules:",
     "- Output must match the provided JSON Schema exactly.",
-    "- Titles are short; optional subtitle/body/bullets/footer.",
+    "- Every slide must include: title, subtitle, body, bullets, footer.",
+    "- If a field has no content, set it to null (not an empty string).",
+    "- Titles are short; subtitle/body/bullets/footer can be null.",
     "",
     prd ? `App context (PRD):\n${prd}` : "",
   ]
@@ -49,6 +51,7 @@ export async function generateDeck({
 
   // Bun doesn't provide zod -> json schema by default; define schema explicitly.
   const jsonSchema = {
+    type: "json_schema",
     name: "deck",
     strict: true,
     schema: {
@@ -65,12 +68,12 @@ export async function generateDeck({
             additionalProperties: false,
             properties: {
               title: { type: "string" },
-              subtitle: { type: "string" },
-              body: { type: "string" },
-              bullets: { type: "array", items: { type: "string" }, maxItems: 8 },
-              footer: { type: "string" },
+              subtitle: { type: ["string", "null"] },
+              body: { type: ["string", "null"] },
+              bullets: { type: ["array", "null"], items: { type: "string" }, maxItems: 8 },
+              footer: { type: ["string", "null"] },
             },
-            required: ["title"],
+            required: ["title", "subtitle", "body", "bullets", "footer"],
           },
         },
       },
@@ -87,12 +90,12 @@ export async function generateDeck({
     body: JSON.stringify({
       model,
       input: [
-        { role: "system", content: [{ type: "text", text: system }] },
+        { role: "system", content: [{ type: "input_text", text: system }] },
         {
           role: "user",
           content: [
             {
-              type: "text",
+              type: "input_text",
               text: JSON.stringify({
                 prompt: request.prompt,
                 slideCount: request.slideCount,
@@ -103,14 +106,25 @@ export async function generateDeck({
           ],
         },
       ],
-      response_format: { type: "json_schema", json_schema: jsonSchema },
-      temperature: 0.7,
+      text: { format: jsonSchema },
     }),
   });
 
   if (!resp.ok) {
+    const ct = resp.headers.get("content-type") ?? "";
+    if (ct.includes("application/json")) {
+      const data = (await resp.json().catch(() => null)) as any;
+      const msg =
+        typeof data?.error?.message === "string"
+          ? data.error.message
+          : typeof data?.message === "string"
+            ? data.message
+            : null;
+      throw new Error(`OpenAI error (${resp.status}): ${(msg ?? "Request failed").slice(0, 240)}`);
+    }
     const text = await resp.text().catch(() => "");
-    throw new Error(`OpenAI error (${resp.status}): ${text.slice(0, 500)}`);
+    const clean = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    throw new Error(`OpenAI error (${resp.status}): ${clean.slice(0, 240)}`);
   }
 
   const data = (await resp.json()) as ResponsesApiResult;
@@ -126,7 +140,9 @@ export async function generateDeck({
   if (deck.slides.length !== request.slideCount) {
     // Keep UI predictable; trim/pad if the model deviates.
     deck.slides = deck.slides.slice(0, request.slideCount);
-    while (deck.slides.length < request.slideCount) deck.slides.push({ title: "New slide" });
+    while (deck.slides.length < request.slideCount) {
+      deck.slides.push({ title: "New slide", subtitle: null, body: null, bullets: null, footer: null });
+    }
   }
   return deck;
 }

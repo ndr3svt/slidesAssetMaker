@@ -5,6 +5,14 @@ import { generateDeck } from "./openai";
 
 const port = Number.parseInt(process.env.PORT ?? "3000", 10);
 
+function normalizeModel(model: string) {
+  const trimmed = model.trim();
+  if (!trimmed) return "gpt-5-nano";
+  // Backwards compatibility with earlier placeholder value.
+  if (trimmed === "gpt-5.2-low") return "gpt-5-nano";
+  return trimmed;
+}
+
 function withCors(resp: Response) {
   const headers = new Headers(resp.headers);
   headers.set("Access-Control-Allow-Origin", process.env.CORS_ORIGIN ?? "*");
@@ -53,13 +61,23 @@ Bun.serve({
         const body = await req.json().catch(() => null);
         const parsedReq = GenerateRequestSchema.safeParse(body);
         if (!parsedReq.success) {
-          return json({ error: parsedReq.error.message }, { status: 400 });
+          const issues = parsedReq.error.issues ?? [];
+          const promptIssue = issues.find(
+            (i) => i.path?.[0] === "prompt" && (i as any).code === "too_big",
+          ) as any;
+          if (promptIssue?.maximum) {
+            return json(
+              { error: `Prompt is too long (max ${promptIssue.maximum} characters).` },
+              { status: 400 },
+            );
+          }
+          return json({ error: "Invalid request.", issues }, { status: 400 });
         }
 
         const prd = await readPrdText();
         const deck = await generateDeck({
           apiKey,
-          model: process.env.OPENAI_MODEL ?? "gpt-5.2-low",
+          model: normalizeModel(process.env.OPENAI_MODEL ?? "gpt-5-nano"),
           prd,
           request: parsedReq.data,
         });
@@ -95,4 +113,3 @@ Bun.serve({
 });
 
 console.log(`API/UI server running on http://localhost:${port}`);
-
