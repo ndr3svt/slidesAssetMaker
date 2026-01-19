@@ -118,6 +118,7 @@ export default function App() {
       x: 90,
       y: kind === "title" ? 140 : kind === "subtitle" ? 360 : 440,
       w: 900,
+      h: kind === "title" ? 240 : kind === "subtitle" ? 90 : 320,
       color: kind === "body" ? "#c7c7d7" : "#7c7cff",
       fontSize: kind === "title" ? 56 : kind === "subtitle" ? 18 : 16,
       fontWeight: kind === "title" ? 700 : kind === "subtitle" ? 600 : 400,
@@ -182,6 +183,7 @@ export default function App() {
           x: 90,
           y: 140,
           w: 900,
+          h: 240,
           color: "#7c7cff",
           fontSize: 56,
           fontWeight: 700,
@@ -655,7 +657,24 @@ export default function App() {
                           type="number"
                           min={100}
                           value={selectedElement.w}
-                          onChange={(e) => updateElement(selectedElement.id, { w: Math.max(100, Number(e.target.value) || 900) })}
+                          onChange={(e) =>
+                            updateElement(selectedElement.id, {
+                              w: Math.max(100, Math.trunc(Number(e.target.value) || selectedElement.w)),
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs text-muted-foreground">Height</div>
+                        <Input
+                          type="number"
+                          min={40}
+                          value={selectedElement.h}
+                          onChange={(e) =>
+                            updateElement(selectedElement.id, {
+                              h: Math.max(40, Math.trunc(Number(e.target.value) || selectedElement.h)),
+                            })
+                          }
                         />
                       </div>
                     </div>
@@ -668,7 +687,7 @@ export default function App() {
                       <Slider
                         value={[selectedElement.fontSize]}
                         min={10}
-                        max={72}
+                        max={192}
                         step={1}
                         onValueChange={(v) => updateElement(selectedElement.id, { fontSize: v[0] ?? selectedElement.fontSize })}
                       />

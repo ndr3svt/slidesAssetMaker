@@ -21,6 +21,7 @@ export type TextElement = {
   x: number;
   y: number;
   w: number;
+  h: number;
   color: string;
   fontSize: number;
   fontWeight: 400 | 600 | 700;
@@ -63,7 +64,6 @@ export type Branding = {
 };
 
 export function createId(prefix = "id") {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `${prefix}_${crypto.randomUUID()}`;
   return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
 }
@@ -92,6 +92,7 @@ function defaultTextStyles(kind: TextKind) {
       fontWeight: 700 as const,
       color: "#7c7cff",
       w: 900,
+      h: 240,
     };
   }
   if (kind === "subtitle") {
@@ -100,6 +101,7 @@ function defaultTextStyles(kind: TextKind) {
       fontWeight: 600 as const,
       color: "#7c7cff",
       w: 900,
+      h: 90,
     };
   }
   return {
@@ -107,6 +109,7 @@ function defaultTextStyles(kind: TextKind) {
     fontWeight: 400 as const,
     color: "#c7c7d7",
     w: 900,
+    h: 320,
   };
 }
 
@@ -194,4 +197,3 @@ export function defaultEditorDeck(): EditorDeck {
   };
   return apiDeckToEditor(api);
 }
-

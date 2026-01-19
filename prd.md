@@ -25,3 +25,7 @@ Build a minimal, neat web app that helps generate and edit LinkedIn carousel sli
 - Frontend: React + Vite + Tailwind + shadcn/ui components.
 - Backend: lightweight Bun server with an OpenAI proxy endpoint.
 - Config: read `OPENAI_API_KEY` from `.env` (and optional `OPENAI_MODEL`).
+
+### Parked TODOs
+- Export deck as PDF (button currently disabled/no-op).
+- Improve AI Generate error handling (avoid raw HTML/error dumps in UI).

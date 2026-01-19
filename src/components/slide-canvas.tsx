@@ -67,10 +67,10 @@ export function SlideCanvas({
       const dx = pt.x - startX;
       const dy = pt.y - startY;
 
-      const maxX =
-        el.type === "image" ? slide.format.width - el.w : slide.format.width - 40;
-      const maxY =
-        el.type === "image" ? slide.format.height - el.h : slide.format.height - 40;
+      const elW = el.w;
+      const elH = el.h;
+      const maxX = slide.format.width - elW;
+      const maxY = slide.format.height - elH;
 
       onUpdateElement(el.id, {
         x: clamp(originX + dx, 0, Math.max(0, maxX)),
@@ -143,6 +143,7 @@ export function SlideCanvas({
                 left: el.x * scale,
                 top: el.y * scale,
                 width: el.w * scale,
+                height: el.h * scale,
                 color: el.color,
                 fontSize: el.fontSize * scale,
                 fontWeight: el.fontWeight,
@@ -150,6 +151,7 @@ export function SlideCanvas({
                 textAlign: el.align,
                 opacity: el.opacity,
                 whiteSpace: "pre-line",
+                overflow: "hidden",
               }}
               onPointerDown={interactive ? (e) => onPointerDownElement(e, el) : undefined}
             >
