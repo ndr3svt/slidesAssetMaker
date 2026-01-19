@@ -117,6 +117,26 @@ export default function App() {
     downloadBlob(blob, filename);
   }
 
+  function pushToast(message: string) {
+    setToast(message);
+    setTimeout(() => setToast(null), 2000);
+  }
+
+  async function copyTextToClipboard(text: string) {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+
   function refreshExportJson() {
     const project = serializeProject(deck, branding);
     setExportJsonText(JSON.stringify(project, null, 2));
@@ -133,8 +153,7 @@ export default function App() {
       }
       const name = (deck.title || "carousel").replace(/[^\w\- ]+/g, "").trim().slice(0, 64) || "carousel";
       downloadJson(`${name}.json`, parsed.project);
-      setToast("Exported project JSON.");
-      setTimeout(() => setToast(null), 2000);
+      pushToast("Exported project JSON.");
     } catch {
       setExportJsonError("Invalid JSON (parse error).");
     }
@@ -158,8 +177,7 @@ export default function App() {
       setSelected(0);
       setSelectedElementId(null);
       setImportJsonOpen(false);
-      setToast("Imported JSON.");
-      setTimeout(() => setToast(null), 2000);
+      pushToast("Imported JSON.");
     } catch {
       setImportJsonError("Invalid JSON (parse error).");
     }
@@ -194,10 +212,11 @@ export default function App() {
   function currentTemplate(): TemplateV1 | null {
     const s = deck.slides[selected];
     if (!s) return null;
+    const { avatarSrc: _avatarSrc, ...brandingWithoutAvatar } = branding;
     return {
       version: 1,
       savedAt: new Date().toISOString(),
-      branding,
+      branding: brandingWithoutAvatar,
       slide: {
         format: s.format,
         backgroundColor: s.backgroundColor,
@@ -226,17 +245,56 @@ export default function App() {
     const t = currentTemplate();
     if (!t) return;
     localStorage.setItem("sooft_template_v1", JSON.stringify(t));
-    setToast("Template saved.");
-    setTimeout(() => setToast(null), 2000);
+    pushToast("Template saved.");
   }
 
   function onExportTemplate() {
     const t = currentTemplate();
     if (!t) return;
     downloadJson("sooft-template.json", t);
-    setToast("Exported template JSON.");
-    setTimeout(() => setToast(null), 2000);
+    pushToast("Exported template JSON.");
   }
+
+  const importExampleJson = `{
+  "type": "sooft_carousel",
+  "version": 1,
+  "savedAt": "2026-01-01T00:00:00.000Z",
+  "branding": {
+    "name": "Andres Villa Torres",
+    "handle": "andresvillatorres",
+    "nameColor": "#c7c7d7",
+    "handleColor": "#9aa0b4",
+    "arrowColor": "#7c7cff"
+  },
+  "deck": {
+    "title": "My carousel",
+    "slides": [
+      {
+        "id": "slide_...",
+        "format": { "preset": "linkedin_portrait", "width": 1080, "height": 1350 },
+        "backgroundColor": "#000012",
+        "elements": [
+          {
+            "id": "el_...",
+            "type": "text",
+            "kind": "title",
+            "text": "Slide title",
+            "x": 90,
+            "y": 140,
+            "w": 900,
+            "h": 240,
+            "color": "#7c7cff",
+            "fontSize": 56,
+            "lineHeight": 1.05,
+            "fontWeight": 700,
+            "align": "left",
+            "opacity": 1
+          }
+        ]
+      }
+    ]
+  }
+}`;
 
   function updateSlide(patch: Partial<EditorSlide>) {
     setDeck((d) => {
@@ -727,47 +785,19 @@ export default function App() {
 	                            <Info className="h-4 w-4" />
 	                          </Button>
 	                        </TooltipTrigger>
-	                        <TooltipContent className="max-h-[260px] overflow-auto whitespace-pre font-mono text-[11px] leading-relaxed">
-{`{
-  "type": "sooft_carousel",
-  "version": 1,
-  "savedAt": "2026-01-01T00:00:00.000Z",
-  "branding": {
-    "name": "Andres Villa Torres",
-    "handle": "andresvillatorres",
-    "nameColor": "#c7c7d7",
-    "handleColor": "#9aa0b4",
-    "arrowColor": "#7c7cff"
-  },
-  "deck": {
-    "title": "My carousel",
-    "slides": [
-      {
-        "id": "slide_...",
-        "format": { "preset": "linkedin_portrait", "width": 1080, "height": 1350 },
-        "backgroundColor": "#000012",
-        "elements": [
-          {
-            "id": "el_...",
-            "type": "text",
-            "kind": "title",
-            "text": "Slide title",
-            "x": 90,
-            "y": 140,
-            "w": 900,
-            "h": 240,
-            "color": "#7c7cff",
-            "fontSize": 56,
-            "lineHeight": 1.05,
-            "fontWeight": 700,
-            "align": "left",
-            "opacity": 1
-          }
-        ]
-      }
-    ]
-  }
-}`}
+	                        <TooltipContent
+	                          className="max-h-[260px] cursor-pointer overflow-auto whitespace-pre font-mono text-[11px] leading-relaxed"
+	                          title="Click to copy"
+	                          onClick={async () => {
+	                            try {
+	                              await copyTextToClipboard(importExampleJson);
+	                              pushToast("Copied JSON example.");
+	                            } catch {
+	                              pushToast("Copy failed.");
+	                            }
+	                          }}
+	                        >
+{importExampleJson}
 	                        </TooltipContent>
 	                      </Tooltip>
 	                    </div>

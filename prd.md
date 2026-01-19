@@ -365,3 +365,8 @@ MVP includes:
   * Visual rhythm
 
 see screenshot for visual reference
+
+---
+
+## Parked TODOs
+- Avatar export: avoid embedding avatar `data:` URLs in project/template JSON; use references or opt-in.

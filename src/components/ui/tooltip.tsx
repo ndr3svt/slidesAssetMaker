@@ -21,11 +21,8 @@ export function TooltipTrigger({
 export function TooltipContent({
   className,
   children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-  sideOffset?: number;
-}) {
+  ...props
+}: React.HTMLAttributes<HTMLSpanElement> & { sideOffset?: number }) {
   return (
     <span
       className={cn(
@@ -33,9 +30,9 @@ export function TooltipContent({
         "group-hover:block",
         className,
       )}
+      {...props}
     >
       {children}
     </span>
   );
 }
-
