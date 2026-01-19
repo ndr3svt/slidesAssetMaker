@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 224 14% 6%;
+    --foreground: 210 40% 98%;
+    --muted: 223 13% 12%;
+    --muted-foreground: 215 20% 70%;
+    --popover: 224 14% 7%;
+    --popover-foreground: 210 40% 98%;
+    --border: 223 12% 16%;
+    --input: 223 12% 16%;
+    --card: 224 14% 7%;
+    --card-foreground: 210 40% 98%;
+    --primary: 241 83% 67%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 223 13% 12%;
+    --secondary-foreground: 210 40% 98%;
+    --accent: 223 13% 12%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62% 48%;
+    --destructive-foreground: 210 40% 98%;
+    --ring: 241 83% 67%;
+    --radius: 12px;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+    "Apple Color Emoji", "Segoe UI Emoji";
+}
+
