@@ -72,11 +72,13 @@ export const CarouselProjectV1Schema = z.object({
 export type CarouselProjectV1 = z.infer<typeof CarouselProjectV1Schema>;
 
 export function serializeProject(deck: EditorDeck, branding: Branding): CarouselProjectV1 {
+  // Keep exports lightweight; avatarSrc can be large (data URL). We'll add an opt-in later if needed.
+  const { avatarSrc: _avatarSrc, ...brandingWithoutAvatar } = branding;
   return {
     type: "sooft_carousel",
     version: 1,
     savedAt: new Date().toISOString(),
-    branding,
+    branding: brandingWithoutAvatar,
     deck,
   };
 }
@@ -91,4 +93,3 @@ export function parseProjectOrLegacy(input: unknown):
   if (legacy.success) return { kind: "legacy", deck: legacy.data };
   return null;
 }
-
