@@ -147,7 +147,7 @@ export function SlideCanvas({
                 color: el.color,
                 fontSize: el.fontSize * scale,
                 fontWeight: el.fontWeight,
-                lineHeight: 1.05,
+                lineHeight: el.lineHeight ?? 1.25,
                 textAlign: el.align,
                 opacity: el.opacity,
                 whiteSpace: "pre-line",

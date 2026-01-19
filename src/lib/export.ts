@@ -78,7 +78,7 @@ function drawTextElement(ctx: CanvasRenderingContext2D, el: TextElement) {
   ctx.clip();
 
   const lines = wrapTextLines(ctx, el.text, el.w);
-  const lineHeight = Math.round(el.fontSize * (el.kind === "title" ? 1.08 : 1.25));
+  const lineHeight = Math.round(el.fontSize * (el.lineHeight || 1.25));
   const originX = el.align === "center" ? el.x + el.w / 2 : el.x;
   let y = el.y;
   for (const line of lines) {

@@ -1,5 +1,6 @@
 import type { DragEvent } from "react";
 import { useMemo, useRef, useState } from "react";
+import { DeckSchema, type Deck } from "@shared/deck";
 import { generateDeck as generateDeckApi } from "@/lib/api";
 import {
   apiDeckToEditor,
@@ -26,7 +27,8 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, ImagePlus, Plus, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Copy, FileJson, ImagePlus, Info, Plus, Save, Trash2 } from "lucide-react";
 import { downloadBlob, exportDeckToPdfBlob } from "@/lib/export";
 
 const CANVAS_WIDTH = 520;
@@ -58,6 +60,11 @@ export default function App() {
   const genPromptMax = 20000;
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const [importJsonOpen, setImportJsonOpen] = useState(false);
+  const [importJsonText, setImportJsonText] = useState("");
+  const [importJsonError, setImportJsonError] = useState<string | null>(null);
 
   const canGenerate = genPrompt.trim().length > 0 && genPrompt.length <= genPromptMax && !genLoading;
 
@@ -97,6 +104,132 @@ export default function App() {
     } finally {
       setExporting(false);
     }
+  }
+
+  function toApiDeckFromEditor(ed: EditorDeck): Deck {
+    const slides = ed.slides.map((s) => {
+      const title = s.elements.find((e) => e.type === "text" && e.kind === "title") as TextElement | undefined;
+      const subtitle = s.elements.find((e) => e.type === "text" && e.kind === "subtitle") as TextElement | undefined;
+      const body = s.elements.find((e) => e.type === "text" && e.kind === "body") as TextElement | undefined;
+      return {
+        title: (title?.text ?? "Slide").slice(0, 90),
+        subtitle: subtitle?.text ? subtitle.text.slice(0, 140) : null,
+        body: body?.text ? body.text.slice(0, 520) : null,
+        bullets: null,
+        footer: null,
+      };
+    });
+    return { title: ed.title.slice(0, 120) || "Carousel", slides };
+  }
+
+  function normalizeDeckInput(raw: any): Deck | null {
+    if (!raw || typeof raw !== "object") return null;
+    const title = typeof raw.title === "string" ? raw.title : "Carousel";
+    const slidesIn = Array.isArray(raw.slides) ? raw.slides : [];
+    const slides = slidesIn.map((s: any) => ({
+      title: typeof s?.title === "string" ? s.title : "Slide",
+      subtitle: typeof s?.subtitle === "string" ? s.subtitle : null,
+      body: typeof s?.body === "string" ? s.body : null,
+      bullets: Array.isArray(s?.bullets) ? s.bullets.filter((x: any) => typeof x === "string") : null,
+      footer: typeof s?.footer === "string" ? s.footer : null,
+    }));
+    const parsed = DeckSchema.safeParse({ title, slides });
+    return parsed.success ? parsed.data : null;
+  }
+
+  function downloadJson(filename: string, data: unknown) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    downloadBlob(blob, filename);
+  }
+
+  function onExportCarouselJson() {
+    const api = toApiDeckFromEditor(deck);
+    const name = (deck.title || "carousel").replace(/[^\w\- ]+/g, "").trim().slice(0, 64) || "carousel";
+    downloadJson(`${name}.json`, api);
+    setToast("Exported carousel JSON.");
+    setTimeout(() => setToast(null), 2000);
+  }
+
+  function onImportCarouselJson() {
+    setImportJsonError(null);
+    try {
+      const raw = JSON.parse(importJsonText);
+      const parsed = normalizeDeckInput(raw);
+      if (!parsed) {
+        setImportJsonError("Invalid JSON. Expected { title, slides: [...] }.");
+        return;
+      }
+      const next = apiDeckToEditor(parsed);
+      setDeck(next);
+      setSelected(0);
+      setSelectedElementId(null);
+      setImportJsonOpen(false);
+      setToast("Imported carousel JSON.");
+      setTimeout(() => setToast(null), 2000);
+    } catch {
+      setImportJsonError("Invalid JSON (parse error).");
+    }
+  }
+
+  type TemplateV1 = {
+    version: 1;
+    savedAt: string;
+    branding: Branding;
+    slide: {
+      format: EditorSlide["format"];
+      backgroundColor: string;
+      elements: Array<
+        | (Omit<TextElement, "id" | "text"> & { type: "text"; kind: TextElement["kind"] })
+        | { type: "image"; x: number; y: number; w: number; h: number; opacity: number }
+      >;
+    };
+  };
+
+  function currentTemplate(): TemplateV1 | null {
+    const s = deck.slides[selected];
+    if (!s) return null;
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      branding,
+      slide: {
+        format: s.format,
+        backgroundColor: s.backgroundColor,
+        elements: s.elements.map((e) => {
+          if (e.type === "image") return { type: "image", x: e.x, y: e.y, w: e.w, h: e.h, opacity: e.opacity };
+          return {
+            type: "text",
+            kind: e.kind,
+            x: e.x,
+            y: e.y,
+            w: e.w,
+            h: e.h,
+            color: e.color,
+            fontSize: e.fontSize,
+            lineHeight: e.lineHeight ?? 1.25,
+            fontWeight: e.fontWeight,
+            align: e.align,
+            opacity: e.opacity,
+          };
+        }),
+      },
+    };
+  }
+
+  function onSaveTemplate() {
+    const t = currentTemplate();
+    if (!t) return;
+    localStorage.setItem("sooft_template_v1", JSON.stringify(t));
+    setToast("Template saved.");
+    setTimeout(() => setToast(null), 2000);
+  }
+
+  function onExportTemplate() {
+    const t = currentTemplate();
+    if (!t) return;
+    downloadJson("sooft-template.json", t);
+    setToast("Exported template JSON.");
+    setTimeout(() => setToast(null), 2000);
   }
 
   function updateSlide(patch: Partial<EditorSlide>) {
@@ -140,6 +273,7 @@ export default function App() {
       h: kind === "title" ? 240 : kind === "subtitle" ? 90 : 320,
       color: kind === "body" ? "#c7c7d7" : "#7c7cff",
       fontSize: kind === "title" ? 56 : kind === "subtitle" ? 18 : 16,
+      lineHeight: kind === "title" ? 1.05 : kind === "subtitle" ? 1.2 : 1.35,
       fontWeight: kind === "title" ? 700 : kind === "subtitle" ? 600 : 400,
       align: "left",
       opacity: 1,
@@ -205,6 +339,7 @@ export default function App() {
           h: 240,
           color: "#7c7cff",
           fontSize: 56,
+          lineHeight: 1.05,
           fontWeight: 700,
           align: "left",
           opacity: 1,
@@ -267,6 +402,7 @@ export default function App() {
   }
 
   return (
+    <TooltipProvider>
     <div className="h-full w-full">
       <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3">
         <Button variant="secondary" size="sm">
@@ -287,7 +423,7 @@ export default function App() {
         </Button>
       </header>
 
-      <div className="flex h-[calc(100%-3rem)]">
+	      <div className="flex h-[calc(100%-3rem)]">
         <aside className="w-[280px] border-r border-border bg-card">
           <ScrollArea className="h-full">
             <div className="p-4">
@@ -352,9 +488,9 @@ export default function App() {
 
               <Separator className="my-4" />
 
-              <div className="text-xs font-semibold text-muted-foreground">Template style</div>
-              <div className="mt-2">
-                <Select value={template} onValueChange={setTemplate}>
+	              <div className="text-xs font-semibold text-muted-foreground">Template style</div>
+	              <div className="mt-2">
+	                <Select value={template} onValueChange={setTemplate}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select template" />
                   </SelectTrigger>
@@ -363,8 +499,18 @@ export default function App() {
                     <SelectItem value="minimal">Minimal</SelectItem>
                     <SelectItem value="bold">Bold</SelectItem>
                   </SelectContent>
-                </Select>
-              </div>
+	                </Select>
+	              </div>
+	              <div className="mt-2 flex gap-2">
+	                <Button size="sm" variant="secondary" onClick={onSaveTemplate}>
+	                  <Save className="h-4 w-4" />
+	                  Save template
+	                </Button>
+	                <Button size="sm" variant="secondary" onClick={onExportTemplate}>
+	                  <FileJson className="h-4 w-4" />
+	                  Export template
+	                </Button>
+	              </div>
 
               <Separator className="my-4" />
 
@@ -547,20 +693,90 @@ export default function App() {
                     {genError ? <div className="text-sm text-destructive">{genError}</div> : null}
                   </div>
                 </DialogContent>
-              </Dialog>
-              <Button size="sm" variant="secondary" onClick={onExportPdf} disabled={exporting}>
-                {exporting ? "Exporting…" : "Export PDF"}
-              </Button>
-            </div>
-          </div>
-          {exportError ? (
+	              </Dialog>
+
+	              <Dialog open={importJsonOpen} onOpenChange={(open) => {
+	                setImportJsonOpen(open);
+	                if (open) setImportJsonError(null);
+	              }}>
+	                <DialogTrigger asChild>
+	                  <Button size="sm" variant="secondary">
+	                    <FileJson className="h-4 w-4" />
+	                    Import JSON
+	                  </Button>
+	                </DialogTrigger>
+	                <DialogContent className="w-[min(920px,95vw)] max-w-none min-h-[600px] max-h-[90vh] overflow-y-auto scrollbar-none">
+	                  <DialogHeader>
+	                    <div className="flex items-center justify-between gap-3">
+	                      <div>
+	                        <DialogTitle>Import carousel JSON</DialogTitle>
+	                        <DialogDescription>Paste a deck JSON. Missing fields are treated as null.</DialogDescription>
+	                      </div>
+	                      <Tooltip>
+	                        <TooltipTrigger asChild>
+	                          <Button variant="secondary" size="icon" aria-label="Show JSON example">
+	                            <Info className="h-4 w-4" />
+	                          </Button>
+	                        </TooltipTrigger>
+	                        <TooltipContent className="max-h-[260px] overflow-auto whitespace-pre font-mono text-[11px] leading-relaxed">
+{`{
+  "title": "My carousel",
+  "slides": [
+    {
+      "title": "Slide 1",
+      "subtitle": null,
+      "body": "Short body text",
+      "bullets": null,
+      "footer": null
+    }
+  ]
+}`}
+	                        </TooltipContent>
+	                      </Tooltip>
+	                    </div>
+	                  </DialogHeader>
+	                  <div className="space-y-3">
+	                    <Textarea
+	                      value={importJsonText}
+	                      onChange={(e) => setImportJsonText(e.target.value)}
+	                      placeholder='{"title":"...","slides":[...]}'
+	                      className="min-h-[360px] max-h-[70vh] resize-y scrollbar-none font-mono text-xs"
+	                    />
+	                    <div className="flex items-center justify-end gap-2">
+	                      <Button variant="secondary" onClick={() => setImportJsonOpen(false)}>
+	                        Cancel
+	                      </Button>
+	                      <Button onClick={onImportCarouselJson}>Import</Button>
+	                    </div>
+	                    {importJsonError ? <div className="text-sm text-destructive">{importJsonError}</div> : null}
+	                  </div>
+	                </DialogContent>
+	              </Dialog>
+
+	              <Button size="sm" variant="secondary" onClick={onExportCarouselJson}>
+	                <FileJson className="h-4 w-4" />
+	                Export JSON
+	              </Button>
+	              <Button size="sm" variant="secondary" onClick={onExportPdf} disabled={exporting}>
+	                {exporting ? "Exporting…" : "Export PDF"}
+	              </Button>
+	            </div>
+	          </div>
+	          {exportError ? (
             <div className="pointer-events-none absolute bottom-20 left-0 right-0 flex items-center justify-center">
               <div className="pointer-events-auto rounded-lg border border-border bg-card px-3 py-2 text-sm text-destructive shadow-panel">
                 {exportError}
               </div>
             </div>
-          ) : null}
-        </main>
+	          ) : null}
+	          {toast ? (
+	            <div className="pointer-events-none absolute bottom-20 left-0 right-0 flex items-center justify-center">
+	              <div className="pointer-events-auto rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground shadow-panel">
+	                {toast}
+	              </div>
+	            </div>
+	          ) : null}
+	        </main>
 
         <aside className="w-[340px] border-l border-border bg-card">
           <ScrollArea className="h-full">
@@ -727,6 +943,44 @@ export default function App() {
                     </div>
 
                     <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Line height</span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {selectedElement.lineHeight.toFixed(2)}
+                        </span>
+                      </div>
+                      <Slider
+                        value={[selectedElement.lineHeight]}
+                        min={0.8}
+                        max={2.2}
+                        step={0.05}
+                        onValueChange={(v) =>
+                          updateElement(selectedElement.id, {
+                            lineHeight: Number((v[0] ?? selectedElement.lineHeight).toFixed(2)),
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Opacity</span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {Math.round(selectedElement.opacity * 100)}%
+                        </span>
+                      </div>
+                      <Slider
+                        value={[selectedElement.opacity]}
+                        min={0.05}
+                        max={1}
+                        step={0.05}
+                        onValueChange={(v) =>
+                          updateElement(selectedElement.id, { opacity: v[0] ?? selectedElement.opacity })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2">
                       <div className="text-sm text-muted-foreground">Weight</div>
                       <Select
                         value={String(selectedElement.fontWeight)}
@@ -809,7 +1063,8 @@ export default function App() {
           </ScrollArea>
         </aside>
       </div>
-    </div>
+	    </div>
+    </TooltipProvider>
   );
 }
 

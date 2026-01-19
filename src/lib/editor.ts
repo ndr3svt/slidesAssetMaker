@@ -24,6 +24,7 @@ export type TextElement = {
   h: number;
   color: string;
   fontSize: number;
+  lineHeight: number;
   fontWeight: 400 | 600 | 700;
   align: "left" | "center";
   opacity: number;
@@ -89,6 +90,7 @@ function defaultTextStyles(kind: TextKind) {
   if (kind === "title") {
     return {
       fontSize: 56,
+      lineHeight: 1.05,
       fontWeight: 700 as const,
       color: "#7c7cff",
       w: 900,
@@ -98,6 +100,7 @@ function defaultTextStyles(kind: TextKind) {
   if (kind === "subtitle") {
     return {
       fontSize: 18,
+      lineHeight: 1.2,
       fontWeight: 600 as const,
       color: "#7c7cff",
       w: 900,
@@ -106,6 +109,7 @@ function defaultTextStyles(kind: TextKind) {
   }
   return {
     fontSize: 16,
+    lineHeight: 1.35,
     fontWeight: 400 as const,
     color: "#c7c7d7",
     w: 900,
