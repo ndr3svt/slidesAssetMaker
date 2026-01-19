@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Copy, ImagePlus, Plus, Trash2 } from "lucide-react";
+import { downloadBlob, exportDeckToPdfBlob } from "@/lib/export";
 
 const CANVAS_WIDTH = 520;
 const THUMB_WIDTH = 190;
@@ -54,6 +55,8 @@ export default function App() {
   const [genSlides, setGenSlides] = useState(5);
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const canGenerate = genPrompt.trim().length > 0 && !genLoading;
 
@@ -77,6 +80,21 @@ export default function App() {
       setGenError(e instanceof Error ? e.message : "Failed to generate.");
     } finally {
       setGenLoading(false);
+    }
+  }
+
+  async function onExportPdf() {
+    if (exporting) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const blob = await exportDeckToPdfBlob(deck, branding);
+      const name = (deck.title || "carousel").replace(/[^\w\- ]+/g, "").trim().slice(0, 64) || "carousel";
+      downloadBlob(blob, `${name}.pdf`);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Failed to export.");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -522,11 +540,18 @@ export default function App() {
                   </div>
                 </DialogContent>
               </Dialog>
-              <Button size="sm" variant="secondary" disabled>
-                Export
+              <Button size="sm" variant="secondary" onClick={onExportPdf} disabled={exporting}>
+                {exporting ? "Exporting…" : "Export PDF"}
               </Button>
             </div>
           </div>
+          {exportError ? (
+            <div className="pointer-events-none absolute bottom-20 left-0 right-0 flex items-center justify-center">
+              <div className="pointer-events-auto rounded-lg border border-border bg-card px-3 py-2 text-sm text-destructive shadow-panel">
+                {exportError}
+              </div>
+            </div>
+          ) : null}
         </main>
 
         <aside className="w-[340px] border-l border-border bg-card">
