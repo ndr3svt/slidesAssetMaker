@@ -773,12 +773,10 @@ export default function App() {
 	                  </Button>
 	                </DialogTrigger>
 	                <DialogContent className="w-[min(920px,95vw)] max-w-none min-h-[600px] max-h-[90vh] overflow-y-auto scrollbar-none">
-	                  <DialogHeader>
-	                    <div className="flex items-center justify-between gap-3">
-	                      <div>
-	                        <DialogTitle>Import carousel JSON</DialogTitle>
-	                        <DialogDescription>Paste a deck JSON. Missing fields are treated as null.</DialogDescription>
-	                      </div>
+	                  <DialogHeader className="relative pr-14">
+	                    <DialogTitle>Import carousel JSON</DialogTitle>
+	                    <DialogDescription>Paste a deck JSON. Missing fields are treated as null.</DialogDescription>
+	                    <div className="absolute right-10 top-[50px]">
 	                      <Tooltip>
 	                        <TooltipTrigger asChild>
 	                          <Button variant="secondary" size="icon" aria-label="Show JSON example">
@@ -898,21 +896,21 @@ export default function App() {
 	              </Button>
 	            </div>
 	          </div>
-	          {exportError ? (
-            <div className="pointer-events-none absolute bottom-20 left-0 right-0 flex items-center justify-center">
+          {exportError ? (
+            <div className="pointer-events-none fixed bottom-6 left-1/2 z-[300] -translate-x-1/2">
               <div className="pointer-events-auto rounded-lg border border-border bg-card px-3 py-2 text-sm text-destructive shadow-panel">
                 {exportError}
               </div>
             </div>
-	          ) : null}
-	          {toast ? (
-	            <div className="pointer-events-none absolute bottom-20 left-0 right-0 flex items-center justify-center">
-	              <div className="pointer-events-auto rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground shadow-panel">
-	                {toast}
-	              </div>
-	            </div>
-	          ) : null}
-	        </main>
+          ) : null}
+          {toast ? (
+            <div className="pointer-events-none fixed bottom-6 left-1/2 z-[300] -translate-x-1/2">
+              <div className="pointer-events-auto rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground shadow-panel">
+                {toast}
+              </div>
+            </div>
+          ) : null}
+        </main>
 
         <aside className="w-[340px] border-l border-border bg-card">
           <ScrollArea className="h-full">
