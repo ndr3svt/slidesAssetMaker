@@ -20,3 +20,12 @@ Open `http://localhost:5173`.
 2. Serve: `bun run start`
 
 Open `http://localhost:3000`.
+
+## Vercel (frontend + serverless API)
+- Framework preset: Vite
+- Build: `bun run build`
+- Output: `dist`
+- Add env vars in Vercel:
+  - `OPENAI_API_KEY`
+  - `OPENAI_MODEL` (optional, default `gpt-5.2`)
+- Serverless endpoints live in `api/` (e.g. `POST /api/generate`).
