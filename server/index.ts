@@ -7,9 +7,9 @@ const port = Number.parseInt(process.env.PORT ?? "3000", 10);
 
 function normalizeModel(model: string) {
   const trimmed = model.trim();
-  if (!trimmed) return "gpt-5-nano";
+  if (!trimmed) return "gpt-5.2";
   // Backwards compatibility with earlier placeholder value.
-  if (trimmed === "gpt-5.2-low") return "gpt-5-nano";
+  if (trimmed === "gpt-5.2-low") return "gpt-5.2";
   return trimmed;
 }
 
@@ -77,7 +77,7 @@ Bun.serve({
         const prd = await readPrdText();
         const deck = await generateDeck({
           apiKey,
-          model: normalizeModel(process.env.OPENAI_MODEL ?? "gpt-5-nano"),
+          model: normalizeModel(process.env.OPENAI_MODEL ?? "gpt-5.2"),
           prd,
           request: parsedReq.data,
         });

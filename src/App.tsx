@@ -487,7 +487,7 @@ export default function App() {
         </Button>
       </header>
 
-	      <div className="flex h-[calc(100%-3rem)]">
+	      <div className="flex h-[calc(100%-3rem)] overflow-hidden">
         <aside className="w-[280px] border-r border-border bg-card">
           <ScrollArea className="h-full">
             <div className="p-4">
@@ -609,8 +609,8 @@ export default function App() {
           </ScrollArea>
         </aside>
 
-        <main className="relative flex flex-1 flex-col">
-          <div className="flex-1 bg-background">
+        <main className="relative flex min-w-0 flex-1 flex-col">
+          <div className="flex-1 min-w-0 bg-background">
             <div className="flex flex-col items-center px-6 pt-6">
               {slide ? (
                 <SlideCanvas
@@ -667,8 +667,8 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="mt-3 w-full overflow-x-auto pb-24">
-                <div className="flex gap-3">
+              <div className="mt-3 w-full max-w-full overflow-x-auto pb-24 scrollbar-none">
+                <div className="inline-flex gap-3 pr-6">
                   {deck.slides.map((s, idx) => (
                     <button
                       key={s.id}
