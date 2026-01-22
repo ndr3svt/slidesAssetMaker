@@ -1,6 +1,6 @@
 import type React from "react";
 import { useMemo, useRef } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ThumbsUp, User } from "lucide-react";
 import type { Branding, EditorSlide, SlideElement } from "@/lib/editor";
 import { clamp } from "@/lib/editor";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 export function SlideCanvas({
   slide,
   index,
+  isLast = false,
   branding,
   widthPx,
   interactive = true,
@@ -18,6 +19,7 @@ export function SlideCanvas({
 }: {
   slide: EditorSlide;
   index: number;
+  isLast?: boolean;
   branding: Branding;
   widthPx: number;
   interactive?: boolean;
@@ -164,10 +166,12 @@ export function SlideCanvas({
       <div className="pointer-events-none absolute bottom-0 left-0 right-0">
         <div className="flex items-end justify-between px-6 pb-5">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 overflow-hidden rounded-full bg-secondary ring-1 ring-border/50">
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-secondary ring-1 ring-border/50">
               {branding.avatarSrc ? (
                 <img src={branding.avatarSrc} alt="" className="h-full w-full object-cover" />
-              ) : null}
+              ) : (
+                <User className="h-5 w-5 text-muted-foreground" />
+              )}
             </div>
             <div className="leading-tight">
               <div className="text-[20px] font-medium" style={{ color: branding.nameColor }}>
@@ -178,7 +182,16 @@ export function SlideCanvas({
               </div>
             </div>
           </div>
-          <ArrowRight className="h-8 w-8" style={{ color: branding.arrowColor }} />
+          {isLast ? (
+            <ThumbsUp
+              className="h-8 w-8"
+              color={branding.arrowColor}
+              fill={branding.arrowColor}
+              strokeWidth={2}
+            />
+          ) : (
+            <ArrowRight className="h-8 w-8" style={{ color: branding.arrowColor }} />
+          )}
         </div>
       </div>
     </div>

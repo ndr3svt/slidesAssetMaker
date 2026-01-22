@@ -2,6 +2,9 @@
 
 Minimal local LinkedIn carousel generator/editor.
 
+## License
+MIT — see `LICENSE`.
+
 ## Setup
 1. Copy `.env.example` → `.env` and set `OPENAI_API_KEY`.
 2. Install deps: `bun install`

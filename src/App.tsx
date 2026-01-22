@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Copy, FileJson, ImagePlus, Info, Plus, Save, Trash2 } from "lucide-react";
+import { Copy, FileJson, ImagePlus, Info, Plus, Save, Trash2, User } from "lucide-react";
 import { downloadBlob, exportDeckToPdfBlob } from "@/lib/export";
 import { parseProjectOrLegacy, serializeProject } from "@/lib/project";
 
@@ -41,8 +41,8 @@ export default function App() {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
 
   const [branding, setBranding] = useState<Branding>({
-    name: "Andres Villa Torres",
-    handle: "andresvillatorres",
+    name: "Your Name",
+    handle: "yournickname",
     nameColor: "#c7c7d7",
     handleColor: "#9aa0b4",
     arrowColor: "#7c7cff",
@@ -505,12 +505,14 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => avatarInputRef.current?.click()}
-                    className="h-12 w-12 overflow-hidden rounded-full bg-secondary ring-1 ring-border/50"
+                    className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-secondary ring-1 ring-border/50"
                     aria-label="Upload avatar"
                   >
                     {branding.avatarSrc ? (
                       <img src={branding.avatarSrc} alt="" className="h-full w-full object-cover" />
-                    ) : null}
+                    ) : (
+                      <User className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </button>
                   <div className="flex-1 space-y-2">
                     <Input value={branding.name} onChange={(e) => setBranding((b) => ({ ...b, name: e.target.value }))} />
@@ -624,6 +626,7 @@ export default function App() {
                 <SlideCanvas
                   slide={slide}
                   index={selected}
+                  isLast={selected === deck.slides.length - 1}
                   branding={branding}
                   widthPx={CANVAS_WIDTH}
                   selectedElementId={selectedElementId}
@@ -701,6 +704,7 @@ export default function App() {
                           <SlideCanvas
                             slide={s}
                             index={idx}
+                            isLast={idx === deck.slides.length - 1}
                             branding={branding}
                             widthPx={THUMB_WIDTH}
                             interactive={false}
