@@ -1,5 +1,5 @@
 import type { DragEvent } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { generateDeck as generateDeckApi } from "@/lib/api";
 import {
   apiDeckToEditor,
@@ -63,6 +63,9 @@ export default function App() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
+  const thumbsViewportRef = useRef<HTMLDivElement | null>(null);
+  const [thumbsViewportHeight, setThumbsViewportHeight] = useState(0);
+
   const [importJsonOpen, setImportJsonOpen] = useState(false);
   const [importJsonText, setImportJsonText] = useState("");
   const [importJsonError, setImportJsonError] = useState<string | null>(null);
@@ -74,6 +77,26 @@ export default function App() {
   const exportJsonFileRef = useRef<HTMLInputElement | null>(null);
 
   const canGenerate = genPrompt.trim().length > 0 && genPrompt.length <= genPromptMax && !genLoading;
+
+  useEffect(() => {
+    const el = thumbsViewportRef.current;
+    if (!el) return;
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setThumbsViewportHeight(el.clientHeight));
+    ro.observe(el);
+    setThumbsViewportHeight(el.clientHeight);
+    return () => ro.disconnect();
+  }, []);
+
+  const thumbInnerHeightPx = useMemo(() => {
+    const paddingY = 16 * 2; // py-4
+    const cardPaddingY = 8 * 2; // p-2
+    const available = Math.max(0, thumbsViewportHeight - paddingY - cardPaddingY);
+    const preset = formatFromPreset("linkedin_portrait");
+    const fallback = Math.round((THUMB_WIDTH / preset.width) * preset.height);
+    const raw = thumbsViewportHeight === 0 ? fallback : available;
+    return Math.max(96, Math.floor(raw));
+  }, [thumbsViewportHeight]);
 
   const selectedElement = useMemo(() => {
     const s = deck.slides[selected];
@@ -620,8 +643,8 @@ export default function App() {
         </aside>
 
         <main className="relative flex min-w-0 flex-1 flex-col">
-          <div className="flex-1 min-w-0 bg-background">
-            <div className="flex flex-col items-center px-6 pt-6">
+          <div className="flex-1 min-w-0 min-h-0 bg-background">
+            <div className="flex h-full min-h-0 flex-col items-center px-6 pt-6">
               {slide ? (
                 <SlideCanvas
                   slide={slide}
@@ -650,10 +673,10 @@ export default function App() {
                 </Button>
               </div>
 
-              <div className="mt-6 flex w-full items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  {deck.title} · {deck.slides.length} slides
-                </div>
+	              <div className="mt-6 flex w-full items-center justify-between">
+	                <div className="text-sm text-muted-foreground">
+	                  {deck.title} · {deck.slides.length} slides
+	                </div>
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
@@ -674,53 +697,62 @@ export default function App() {
                     accept="image/*"
                     className="hidden"
                     onChange={(e) => onAddSlideImage(e.target.files?.[0] ?? null)}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-3 w-full max-w-full overflow-x-auto pb-24 scrollbar-none">
-                <div className="inline-flex gap-3 pr-6">
-                  {deck.slides.map((s, idx) => (
-                    <button
-                      key={s.id}
-                      draggable
-                      onDragStart={(e) => onDragStartThumb(idx, e)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => onDropThumb(idx, e)}
-                      onClick={() => {
-                        setSelected(idx);
-                        setSelectedElementId(null);
-                      }}
-                      className="text-left"
-                      aria-label={`Select slide ${idx + 1}`}
-                    >
-                      <Card
-                        className={[
-                          "relative w-[200px] shrink-0 overflow-hidden rounded-2xl",
-                          idx === selected ? "ring-2 ring-ring" : "ring-1 ring-border/40",
-                        ].join(" ")}
-                      >
-                        <div className="p-2">
-                          <SlideCanvas
-                            slide={s}
-                            index={idx}
-                            isLast={idx === deck.slides.length - 1}
-                            branding={branding}
-                            widthPx={THUMB_WIDTH}
-                            interactive={false}
-                            selectedElementId={null}
-                            onSelectElement={() => {}}
-                            onUpdateElement={() => {}}
-                            className="border-0 shadow-none"
-                          />
-                        </div>
-                      </Card>
-                    </button>
-	                  ))}
+	                  />
 	                </div>
 	              </div>
-	            </div>
-	          </div>
+
+	              <div ref={thumbsViewportRef} className="mt-3 w-full min-h-0 flex-1 overflow-hidden">
+	                <div className="h-full w-full overflow-x-auto overflow-y-hidden scrollbar-none py-4">
+	                <div className="inline-flex items-start gap-3 pr-6">
+	                  {deck.slides.map((s, idx) => {
+                      const widthPx = Math.max(80, Math.round(thumbInnerHeightPx * (s.format.width / s.format.height)));
+                      const cardWidthPx = widthPx + 16; // p-2 + p-2
+                      const uiScale = widthPx / CANVAS_WIDTH;
+                      return (
+                        <button
+                          key={s.id}
+                          draggable
+                          onDragStart={(e) => onDragStartThumb(idx, e)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => onDropThumb(idx, e)}
+                          onClick={() => {
+                            setSelected(idx);
+                            setSelectedElementId(null);
+                          }}
+                          className="text-left"
+                          aria-label={`Select slide ${idx + 1}`}
+                        >
+                          <Card
+                            className={[
+                              "relative shrink-0 overflow-hidden rounded-2xl",
+                              idx === selected ? "ring-2 ring-ring" : "ring-1 ring-border/40",
+                            ].join(" ")}
+                            style={{ width: `${cardWidthPx}px` }}
+                          >
+                            <div className="p-2">
+                              <SlideCanvas
+                                slide={s}
+                                index={idx}
+                                isLast={idx === deck.slides.length - 1}
+                                branding={branding}
+                                widthPx={widthPx}
+                                uiScale={uiScale}
+                                interactive={false}
+                                selectedElementId={null}
+                                onSelectElement={() => {}}
+                                onUpdateElement={() => {}}
+                                className="border-0 shadow-none"
+                              />
+                            </div>
+                          </Card>
+                        </button>
+                      );
+                    })}
+		                </div>
+                    </div>
+		              </div>
+		            </div>
+		          </div>
 
 	          <div className="pointer-events-none absolute bottom-4 left-0 right-0 flex items-center justify-center">
 	            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 shadow-panel">
@@ -740,7 +772,7 @@ export default function App() {
 	                <DialogContent className="w-[min(920px,95vw)] max-w-none min-h-[600px] max-h-[90vh] overflow-y-auto scrollbar-none">
 	                  <DialogHeader>
 	                    <DialogTitle>Generate carousel</DialogTitle>
-	                    <DialogDescription>Describe what you want. The API uses `OPENAI_API_KEY` from `.env`.</DialogDescription>
+	                    <DialogDescription>Describe what you want.</DialogDescription>
 	                  </DialogHeader>
 	                  <div className="space-y-3">
                     <Textarea

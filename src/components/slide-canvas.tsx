@@ -11,6 +11,7 @@ export function SlideCanvas({
   isLast = false,
   branding,
   widthPx,
+  uiScale = 1,
   interactive = true,
   selectedElementId,
   onSelectElement,
@@ -22,6 +23,7 @@ export function SlideCanvas({
   isLast?: boolean;
   branding: Branding;
   widthPx: number;
+  uiScale?: number;
   interactive?: boolean;
   selectedElementId: string | null;
   onSelectElement: (id: string | null) => void;
@@ -40,6 +42,25 @@ export function SlideCanvas({
     }),
     [widthPx, heightPx, slide.backgroundColor],
   );
+
+  const footer = useMemo(() => {
+    const basePadX = 24;
+    const basePadBottom = 20;
+    const baseAvatar = 48;
+    const baseGap = 12;
+    const baseName = 20;
+    const baseHandle = 15;
+    const baseIcon = 32;
+    return {
+      padX: basePadX * uiScale,
+      padBottom: basePadBottom * uiScale,
+      avatar: baseAvatar * uiScale,
+      gap: baseGap * uiScale,
+      name: baseName * uiScale,
+      handle: baseHandle * uiScale,
+      icon: baseIcon * uiScale,
+    };
+  }, [uiScale]);
 
   function clientToSlidePoint(clientX: number, clientY: number) {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -164,33 +185,52 @@ export function SlideCanvas({
       </div>
 
       <div className="pointer-events-none absolute bottom-0 left-0 right-0">
-        <div className="flex items-end justify-between px-6 pb-5">
+        <div
+          className="flex items-end justify-between"
+          style={{ paddingLeft: footer.padX, paddingRight: footer.padX, paddingBottom: footer.padBottom }}
+        >
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-secondary ring-1 ring-border/50">
+            <div
+              className="flex items-center justify-center overflow-hidden rounded-full bg-secondary ring-1 ring-border/50"
+              style={{ width: footer.avatar, height: footer.avatar }}
+            >
               {branding.avatarSrc ? (
                 <img src={branding.avatarSrc} alt="" className="h-full w-full object-cover" />
               ) : (
-                <User className="h-5 w-5 text-muted-foreground" />
+                <User
+                  className="text-muted-foreground"
+                  style={{ width: Math.max(12, footer.avatar * 0.45), height: Math.max(12, footer.avatar * 0.45) }}
+                />
               )}
             </div>
-            <div className="leading-tight">
-              <div className="text-[20px] font-medium" style={{ color: branding.nameColor }}>
+            <div className="leading-tight" style={{ marginLeft: footer.gap - 12 }}>
+              <div
+                className="font-medium"
+                style={{ color: branding.nameColor, fontSize: footer.name, lineHeight: 1.1 }}
+              >
                 {branding.name}
               </div>
-              <div className="text-[15px]" style={{ color: branding.handleColor, opacity: 0.9 }}>
+              <div
+                style={{
+                  color: branding.handleColor,
+                  opacity: 0.9,
+                  fontSize: footer.handle,
+                  lineHeight: 1.15,
+                }}
+              >
                 {branding.handle}
               </div>
             </div>
           </div>
           {isLast ? (
             <ThumbsUp
-              className="h-8 w-8"
+              style={{ width: footer.icon, height: footer.icon }}
               color={branding.arrowColor}
               fill={branding.arrowColor}
               strokeWidth={2}
             />
           ) : (
-            <ArrowRight className="h-8 w-8" style={{ color: branding.arrowColor }} />
+            <ArrowRight style={{ width: footer.icon, height: footer.icon, color: branding.arrowColor }} />
           )}
         </div>
       </div>
