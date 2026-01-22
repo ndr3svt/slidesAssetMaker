@@ -48,3 +48,16 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes indeterminate-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(420%);
+  }
+}
+
+.indeterminate-bar {
+  animation: indeterminate-slide 1.1s ease-in-out infinite;
+}

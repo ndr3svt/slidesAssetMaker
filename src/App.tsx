@@ -58,6 +58,7 @@ export default function App() {
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const genPromptMax = 20000;
+  const [genOpen, setGenOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -90,6 +91,8 @@ export default function App() {
       setDeck(apiDeckToEditor(next));
       setSelected(0);
       setSelectedElementId(null);
+      setGenOpen(false);
+      pushToast("Carousel generated.");
     } catch (e) {
       setGenError(e instanceof Error ? e.message : "Failed to generate.");
     } finally {
@@ -468,6 +471,11 @@ export default function App() {
   return (
     <TooltipProvider>
     <div className="h-full w-full">
+      {genLoading ? (
+        <div className="fixed left-0 top-0 z-[400] h-[2px] w-full overflow-hidden bg-transparent">
+          <div className="indeterminate-bar h-full w-1/4 bg-primary" />
+        </div>
+      ) : null}
       <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3">
         <Button variant="secondary" size="sm">
           Settings
@@ -712,18 +720,25 @@ export default function App() {
 
 	          <div className="pointer-events-none absolute bottom-4 left-0 right-0 flex items-center justify-center">
 	            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 shadow-panel">
-	              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm" disabled={genLoading}>
-                    {genLoading ? "Generating…" : "AI Generate"}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-[min(920px,95vw)] max-w-none min-h-[600px] max-h-[90vh] overflow-y-auto scrollbar-none">
-                  <DialogHeader>
-                    <DialogTitle>Generate carousel</DialogTitle>
-                    <DialogDescription>Describe what you want. The API uses `OPENAI_API_KEY` from `.env`.</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-3">
+		              <Dialog open={genOpen} onOpenChange={setGenOpen}>
+	                <DialogTrigger asChild>
+	                  <Button
+	                    size="sm"
+	                    disabled={genLoading}
+	                    onClick={() => {
+	                      setGenOpen(true);
+	                      setGenError(null);
+	                    }}
+	                  >
+	                    {genLoading ? "Generating…" : "AI Generate"}
+	                  </Button>
+	                </DialogTrigger>
+	                <DialogContent className="w-[min(920px,95vw)] max-w-none min-h-[600px] max-h-[90vh] overflow-y-auto scrollbar-none">
+	                  <DialogHeader>
+	                    <DialogTitle>Generate carousel</DialogTitle>
+	                    <DialogDescription>Describe what you want. The API uses `OPENAI_API_KEY` from `.env`.</DialogDescription>
+	                  </DialogHeader>
+	                  <div className="space-y-3">
                     <Textarea
                       value={genPrompt}
                       onChange={(e) => setGenPrompt(e.target.value)}
@@ -749,15 +764,15 @@ export default function App() {
                         }}
                         className="w-24"
                       />
-                      <div className="flex-1" />
-                      <Button onClick={onGenerate} disabled={!canGenerate}>
-                        Generate
-                      </Button>
-                    </div>
-                    {genError ? <div className="text-sm text-destructive">{genError}</div> : null}
-                  </div>
-                </DialogContent>
-	              </Dialog>
+	                      <div className="flex-1" />
+	                      <Button onClick={onGenerate} disabled={!canGenerate}>
+	                        Generate
+	                      </Button>
+	                    </div>
+	                    {genError ? <div className="text-sm text-destructive">{genError}</div> : null}
+	                  </div>
+	                </DialogContent>
+		              </Dialog>
 
 	              <Dialog
 	                open={importJsonOpen}

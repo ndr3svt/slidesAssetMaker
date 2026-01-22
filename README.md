@@ -29,3 +29,11 @@ Open `http://localhost:3000`.
   - `OPENAI_API_KEY`
   - `OPENAI_MODEL` (optional, default `gpt-5.2`)
 - Serverless endpoints live in `api/` (e.g. `POST /api/generate`).
+
+
+## run tests locally 
+This will check for type errors and build errors.
+To run tests locally, run the following command:
+```bash 
+bunx tsc -p tsconfig.json --noEmit && bunx vite build
+```

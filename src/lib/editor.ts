@@ -89,31 +89,31 @@ export function formatFromPreset(preset: SlideFormatPreset): SlideFormat {
 function defaultTextStyles(kind: TextKind) {
   if (kind === "title") {
     return {
-      fontSize: 56,
+      fontSize: 112,
       lineHeight: 1.05,
       fontWeight: 700 as const,
       color: "#7c7cff",
       w: 900,
-      h: 240,
+      h: 420,
     };
   }
   if (kind === "subtitle") {
     return {
-      fontSize: 18,
+      fontSize: 54,
       lineHeight: 1.2,
       fontWeight: 600 as const,
       color: "#7c7cff",
       w: 900,
-      h: 90,
+      h: 160,
     };
   }
   return {
-    fontSize: 16,
+    fontSize: 46,
     lineHeight: 1.35,
     fontWeight: 400 as const,
     color: "#c7c7d7",
     w: 900,
-    h: 320,
+    h: 620,
   };
 }
 
@@ -130,7 +130,7 @@ export function apiSlideToEditor(slide: ApiSlide, idx: number): EditorSlide {
       kind: "title",
       text: title,
       x: 90,
-      y: 140,
+      y: 160,
       align: "left",
       opacity: 1,
       ...defaultTextStyles("title"),
@@ -144,7 +144,7 @@ export function apiSlideToEditor(slide: ApiSlide, idx: number): EditorSlide {
       kind: "subtitle",
       text: slide.subtitle,
       x: 90,
-      y: 360,
+      y: 520,
       align: "left",
       opacity: 0.9,
       ...defaultTextStyles("subtitle"),
@@ -158,7 +158,7 @@ export function apiSlideToEditor(slide: ApiSlide, idx: number): EditorSlide {
       kind: "body",
       text: slide.body,
       x: 90,
-      y: slide.subtitle ? 430 : 380,
+      y: slide.subtitle ? 650 : 560,
       align: "left",
       opacity: 1,
       ...defaultTextStyles("body"),
