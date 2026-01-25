@@ -6,6 +6,10 @@ type ExportOptions = {
   jpegQuality?: number;
 };
 
+const THUMBS_UP_PATH_1 = "M7 10v12";
+const THUMBS_UP_PATH_2 =
+  "M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z";
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -108,7 +112,25 @@ function drawCoverImage(
   ctx.drawImage(img, dx, dy, dw, dh);
 }
 
-async function renderSlideToCanvas(slide: EditorSlide, branding: Branding, scale: number) {
+function drawThumbsUp(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
+  ctx.save();
+  const s = size / 24;
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const p1 = new Path2D(THUMBS_UP_PATH_1);
+  const p2 = new Path2D(THUMBS_UP_PATH_2);
+  ctx.fill(p2);
+  ctx.stroke(p1);
+  ctx.stroke(p2);
+  ctx.restore();
+}
+
+async function renderSlideToCanvas(slide: EditorSlide, branding: Branding, scale: number, isLast: boolean) {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(slide.format.width * scale);
   canvas.height = Math.round(slide.format.height * scale);
@@ -178,23 +200,27 @@ async function renderSlideToCanvas(slide: EditorSlide, branding: Branding, scale
   ctx.fillText(branding.handle, textX, baseY + 56);
   ctx.restore();
 
-  // arrow
+  // arrow / thumbs-up on last slide
   const arrowSize = 68;
   const arrowX = slide.format.width - padX - arrowSize;
   const arrowY = baseY + 28;
-  ctx.save();
-  ctx.strokeStyle = branding.arrowColor;
-  ctx.lineWidth = 6;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(arrowX, arrowY + arrowSize / 2);
-  ctx.lineTo(arrowX + arrowSize, arrowY + arrowSize / 2);
-  ctx.moveTo(arrowX + arrowSize, arrowY + arrowSize / 2);
-  ctx.lineTo(arrowX + arrowSize - 20, arrowY + arrowSize / 2 - 18);
-  ctx.moveTo(arrowX + arrowSize, arrowY + arrowSize / 2);
-  ctx.lineTo(arrowX + arrowSize - 20, arrowY + arrowSize / 2 + 18);
-  ctx.stroke();
-  ctx.restore();
+  if (isLast) {
+    drawThumbsUp(ctx, arrowX, arrowY, arrowSize, branding.arrowColor);
+  } else {
+    ctx.save();
+    ctx.strokeStyle = branding.arrowColor;
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(arrowX, arrowY + arrowSize / 2);
+    ctx.lineTo(arrowX + arrowSize, arrowY + arrowSize / 2);
+    ctx.moveTo(arrowX + arrowSize, arrowY + arrowSize / 2);
+    ctx.lineTo(arrowX + arrowSize - 20, arrowY + arrowSize / 2 - 18);
+    ctx.moveTo(arrowX + arrowSize, arrowY + arrowSize / 2);
+    ctx.lineTo(arrowX + arrowSize - 20, arrowY + arrowSize / 2 + 18);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   return canvas;
 }
@@ -219,8 +245,9 @@ export async function exportDeckToPdfBlob(deck: EditorDeck, branding: Branding, 
     imgH: number;
   }> = [];
 
-  for (const slide of deck.slides) {
-    const canvas = await renderSlideToCanvas(slide, branding, qualityScale);
+  for (let idx = 0; idx < deck.slides.length; idx++) {
+    const slide = deck.slides[idx]!;
+    const canvas = await renderSlideToCanvas(slide, branding, qualityScale, idx === deck.slides.length - 1);
     const dataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
     const bytes = new Uint8Array(await (await fetch(dataUrl)).arrayBuffer());
     slides.push({
