@@ -194,7 +194,7 @@ export function defaultEditorDeck(): EditorDeck {
         footer: null,
       },
       {
-        title: "The Real Challenge:\nUnderstanding the Machine",
+        title: "Understanding the Machine",
         subtitle: "What’s happening behind the scenes?",
         body: "When a feature “looks fine” but something’s off, you need to grasp state, flow, and what code does on every request.",
         bullets: null,
