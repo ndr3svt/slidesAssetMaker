@@ -180,14 +180,14 @@ export function defaultEditorDeck(): EditorDeck {
     title: "Coding in 2026",
     slides: [
       {
-        title: "Coding in 2026:\nBeyond Syntax",
+        title: "Coding in 2026: Beyond Syntax",
         subtitle: "Why systems literacy matters more than memorizing code",
         body: "AI tools have changed programming, but real value comes from modularity, systems thinking, and intent — not just syntax.",
         bullets: null,
         footer: null,
       },
       {
-        title: "Syntax is Easy to\nOutsource",
+        title: "Syntax is Easy to Outsource",
         subtitle: null,
         body: "Language rules aren’t the bottleneck. LLMs wire features, fix typos, and generate UI & backend code in seconds.",
         bullets: null,
@@ -201,7 +201,7 @@ export function defaultEditorDeck(): EditorDeck {
         footer: null,
       },
       {
-        title: "LLMs Suggest.\nHumans Decide.",
+        title: "LLMs Suggest. Humans Decide.",
         subtitle: null,
         body: "Patterns help you reason about tradeoffs, errors, and failure modes. But humans spot intent and context.",
         bullets: null,
