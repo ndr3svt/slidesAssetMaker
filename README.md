@@ -26,7 +26,7 @@ Open `http://localhost:3000`.
 
 ## Vercel (frontend + serverless API)
 - Framework preset: Vite
-- Build: `bun run build`
+- Build: `bun run build`  or `bunx vite build`
 - Output: `dist`
 - Add env vars in Vercel:
   - `OPENAI_API_KEY`
@@ -39,4 +39,11 @@ This will check for type errors and build errors.
 To run tests locally, run the following command:
 ```bash 
 bunx tsc -p tsconfig.json --noEmit && bunx vite build
+```
+
+## run dev locally
+
+To run dev locally, run the following command:
+```bash 
+bun run dev
 ```
