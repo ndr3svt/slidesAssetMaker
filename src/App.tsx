@@ -500,12 +500,12 @@ export default function App() {
         </div>
       ) : null}
       <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3">
-        <Button variant="secondary" size="sm">
+        {/* <Button variant="secondary" size="sm">
           Settings
         </Button>
         <Button variant="secondary" size="sm">
           Templates
-        </Button>
+        </Button> */}
         <Separator orientation="vertical" className="mx-2 h-6" />
         {/* <div className="flex flex-1 items-center gap-2">
           <Input className="max-w-[200px]" placeholder="Upload file" disabled />
