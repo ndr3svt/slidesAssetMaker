@@ -286,8 +286,8 @@ export default function App() {
   "version": 1,
   "savedAt": "2026-01-01T00:00:00.000Z",
   "branding": {
-    "name": "Andres Villa Torres",
-    "handle": "andresvillatorres",
+    "name": "Your Full Name",
+    "handle": "yournickname",
     "nameColor": "#c7c7d7",
     "handleColor": "#9aa0b4",
     "arrowColor": "#7c7cff"
